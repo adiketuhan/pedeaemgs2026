@@ -3,49 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Penggunaan Air - Rusunawa Gunungsari</title>
+    <title>Laporan Lengkap - Rusunawa Gunungsari</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen font-sans">
 
-    <nav class="bg-blue-600 p-4 text-white shadow-md">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <h1 class="font-bold text-lg">Rekap Tagihan Rusun</h1>
-            <a href="index.html" class="text-sm bg-blue-700 px-3 py-1 rounded hover:bg-blue-800 transition"> + Input Baru</a>
+    <nav class="bg-blue-800 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <span class="text-xl font-bold tracking-wide">Rusunawa Gunungsari</span>
+            </div>
+            <a href="index.html" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition shadow-md">
+                + Input Meter Baru
+            </a>
         </div>
     </nav>
 
-    <div class="max-w-6xl mx-auto p-4 md:p-8">
-        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-800">Daftar Pemakaian Air</h2>
-                <button onclick="muatData()" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">🔄 Refresh Data</button>
+    <div class="max-w-7xl mx-auto p-4 md:p-8">
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+            <div class="p-6 border-b bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Laporan Tagihan Air</h2>
+                    <p class="text-sm text-gray-500">Data real-time dari input petugas</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-700 text-sm font-medium transition">
+                        🖨️ Cetak
+                    </button>
+                    <button onclick="muatData()" class="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-sm font-medium transition">
+                        🔄 Refresh
+                    </button>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
+                        <tr class="bg-blue-50 text-blue-800 text-xs uppercase tracking-wider font-bold">
                             <th class="p-4 border-b">Tanggal</th>
-                            <th class="p-4 border-b">Unit</th>
-                            <th class="p-4 border-b">Meter (Lalu/Ini)</th>
+                            <th class="p-4 border-b">Unit & Penghuni</th>
+                            <th class="p-4 border-b text-center">Meteran (M³)</th>
                             <th class="p-4 border-b text-center">Pemakaian</th>
-                            <th class="p-4 border-b">Biaya Air</th>
-                            <th class="p-4 border-b">Total Tagihan</th>
+                            <th class="p-4 border-b text-right">Tagihan Air</th>
+                            <th class="p-4 border-b text-right">Total (+Sampah)</th>
                         </tr>
                     </thead>
-                    <tbody id="tabelBody" class="text-gray-700">
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-gray-400 italic">Sedang mengambil data dari server...</td>
-                        </tr>
+                    <tbody id="tabelBody" class="text-gray-700 text-sm divide-y divide-gray-100">
+                        <tr><td colspan="6" class="p-8 text-center text-gray-400 animate-pulse">Sedang mengambil data...</td></tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="p-4 border-t bg-gray-50 text-center text-xs text-gray-400">
+                Total Tagihan Termasuk Iuran Sampah Wajib (Rp 10.000)
             </div>
         </div>
     </div>
 
     <script>
+        // --- KONFIGURASI SUPABASE ---
         const SUPABASE_URL = 'https://mxtizprwaflafsejlrlw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_zfDUciq56k8zvSVc-Uw_7g_IIvrJMAQ';
         
@@ -55,42 +71,72 @@
         async function muatData() {
             const tableBody = document.getElementById('tabelBody');
             
-            // Ambil data dari tabel pencatatan_air diurutkan dari yang terbaru
-            const { data, error } = await _supabase
+            // 1. Ambil Data Meteran (Pencatatan)
+            const { data: dataMeter, error: errMeter } = await _supabase
                 .from('pencatatan_air')
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Gagal memuat data: ${error.message}</td></tr>`;
+            // 2. Ambil Data Penghuni (Nama)
+            const { data: dataPenghuni, error: errPenghuni } = await _supabase
+                .from('data_penghuni')
+                .select('*');
+
+            if (errMeter || errPenghuni) {
+                console.error(errMeter, errPenghuni);
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold">Gagal memuat data. Cek koneksi internet.</td></tr>`;
                 return;
             }
 
-            if (data.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Belum ada data tercatat.</td></tr>`;
+            if (!dataMeter || dataMeter.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">Belum ada data meteran yang diinput.</td></tr>`;
                 return;
             }
 
-            tableBody.innerHTML = ''; // Bersihkan loading
+            // 3. Gabungkan Data (Mapping Nama ke Unit)
+            // Kita buat "Kamus" agar mudah mencari nama berdasarkan no_unit
+            const mapPenghuni = {};
+            if (dataPenghuni) {
+                dataPenghuni.forEach(org => {
+                    mapPenghuni[org.no_unit] = org.nama_penghuni;
+                });
+            }
 
-            data.forEach(item => {
-                const tgl = new Date(item.created_at).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
-                const pemakaian = item.meter_sekarang - item.meter_lalu;
+            // 4. Tampilkan ke Tabel
+            tableBody.innerHTML = ''; 
+            
+            dataMeter.forEach(item => {
+                const tgl = new Date(item.created_at).toLocaleDateString('id-ID', {
+                    day: '2-digit', month: 'short', year: '2-digit'
+                });
+                
+                // Cari nama penghuni, jika tidak ada tulis "Tanpa Nama"
+                const nama = mapPenghuni[item.no_unit] || '<span class="text-red-400 italic">Data Penghuni Kosong</span>';
+                
+                // Format Rupiah
+                const fmtUang = (angka) => "Rp " + angka.toLocaleString('id-ID');
+                const pemakaian = (item.meter_sekarang - item.meter_lalu).toFixed(0);
 
                 tableBody.innerHTML += `
-                    <tr class="hover:bg-gray-50 border-b">
-                        <td class="p-4 text-sm">${tgl}</td>
-                        <td class="p-4 font-bold text-gray-900">${item.no_unit}</td>
-                        <td class="p-4 text-sm text-gray-500">${item.meter_lalu} → ${item.meter_sekarang}</td>
-                        <td class="p-4 text-center"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">${pemakaian.toFixed(2)} m³</span></td>
-                        <td class="p-4 text-sm font-semibold">Rp ${item.tagihan_air.toLocaleString('id-ID')}</td>
-                        <td class="p-4 text-sm font-black text-green-600">Rp ${item.total_bayar.toLocaleString('id-ID')}</td>
+                    <tr class="hover:bg-blue-50 transition duration-150">
+                        <td class="p-4 text-gray-500">${tgl}</td>
+                        <td class="p-4">
+                            <div class="font-bold text-gray-900 text-lg">${item.no_unit}</div>
+                            <div class="text-blue-600 font-medium uppercase text-xs">${nama}</div>
+                        </td>
+                        <td class="p-4 text-center text-gray-500">
+                            ${item.meter_lalu} <span class="text-gray-300">➜</span> <b>${item.meter_sekarang}</b>
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold">${pemakaian} m³</span>
+                        </td>
+                        <td class="p-4 text-right font-medium text-gray-600">${fmtUang(item.tagihan_air)}</td>
+                        <td class="p-4 text-right font-black text-green-600 text-lg">${fmtUang(item.total_bayar)}</td>
                     </tr>
                 `;
             });
         }
 
-        // Jalankan fungsi saat halaman dibuka
         muatData();
     </script>
 </body>
