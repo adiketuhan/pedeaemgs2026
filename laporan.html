@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Penggunaan Air - Rusunawa Gunungsari</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <nav class="bg-blue-600 p-4 text-white shadow-md">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="font-bold text-lg">Rekap Tagihan Rusun</h1>
+            <a href="index.html" class="text-sm bg-blue-700 px-3 py-1 rounded hover:bg-blue-800 transition"> + Input Baru</a>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="text-xl font-bold text-gray-800">Daftar Pemakaian Air</h2>
+                <button onclick="muatData()" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">🔄 Refresh Data</button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
+                            <th class="p-4 border-b">Tanggal</th>
+                            <th class="p-4 border-b">Unit</th>
+                            <th class="p-4 border-b">Meter (Lalu/Ini)</th>
+                            <th class="p-4 border-b text-center">Pemakaian</th>
+                            <th class="p-4 border-b">Biaya Air</th>
+                            <th class="p-4 border-b">Total Tagihan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelBody" class="text-gray-700">
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-gray-400 italic">Sedang mengambil data dari server...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://mxtizprwaflafsejlrlw.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_zfDUciq56k8zvSVc-Uw_7g_IIvrJMAQ';
+        
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function muatData() {
+            const tableBody = document.getElementById('tabelBody');
+            
+            // Ambil data dari tabel pencatatan_air diurutkan dari yang terbaru
+            const { data, error } = await _supabase
+                .from('pencatatan_air')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Gagal memuat data: ${error.message}</td></tr>`;
+                return;
+            }
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Belum ada data tercatat.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = ''; // Bersihkan loading
+
+            data.forEach(item => {
+                const tgl = new Date(item.created_at).toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+                const pemakaian = item.meter_sekarang - item.meter_lalu;
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-gray-50 border-b">
+                        <td class="p-4 text-sm">${tgl}</td>
+                        <td class="p-4 font-bold text-gray-900">${item.no_unit}</td>
+                        <td class="p-4 text-sm text-gray-500">${item.meter_lalu} → ${item.meter_sekarang}</td>
+                        <td class="p-4 text-center"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">${pemakaian.toFixed(2)} m³</span></td>
+                        <td class="p-4 text-sm font-semibold">Rp ${item.tagihan_air.toLocaleString('id-ID')}</td>
+                        <td class="p-4 text-sm font-black text-green-600">Rp ${item.total_bayar.toLocaleString('id-ID')}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Jalankan fungsi saat halaman dibuka
+        muatData();
+    </script>
+</body>
+</html>
