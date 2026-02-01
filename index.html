@@ -9,50 +9,77 @@
 </head>
 <body class="bg-gray-100 min-h-screen p-4">
 
-    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">Input Pemakaian Air</h2>
-        <p class="text-sm text-gray-500 mb-6">Rusunawa Gunungsari, Kota Surabaya</p>
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mt-6">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Input Pemakaian Air</h2>
+            <p class="text-sm text-gray-500">Rusunawa Gunungsari, Kota Surabaya</p>
+        </div>
 
         <form id="waterForm" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Nomor Unit / Kamar</label>
-                <input type="text" id="noUnit" placeholder="Contoh: A-102" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <input type="text" id="noUnit" placeholder="Contoh: A-102" required 
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
+
             <div>
                 <label class="block text-sm font-medium text-gray-700">Meteran Bulan Lalu (m³)</label>
-                <input type="number" id="meterLalu" placeholder="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <input type="number" id="meterLalu" placeholder="0" required 
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
+
             <div>
                 <label class="block text-sm font-medium text-gray-700">Meteran Bulan Ini (m³)</label>
-                <input type="number" id="meterSekarang" placeholder="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <input type="number" id="meterSekarang" placeholder="0" required 
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
             </div>
-            <button type="button" onclick="hitungTagihan()" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-semibold transition">
-                Hitung Tagihan
+
+            <button type="button" onclick="hitungTagihan()" 
+                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 font-bold transition shadow-lg">
+                HITUNG TAGIHAN
             </button>
         </form>
 
-        <div id="hasil" class="mt-8 hidden border-t pt-4">
+        <div id="hasil" class="mt-8 hidden border-t-2 border-dashed pt-4 bg-blue-50 p-4 rounded-lg">
             <h3 class="text-lg font-bold text-gray-800 mb-3 text-center">Rincian Tagihan</h3>
             <div class="space-y-2 text-sm">
-                <div class="flex justify-between"><span>Pemakaian Air:</span><span id="resPemakaian" class="font-bold">0 m³</span></div>
-                <div class="flex justify-between"><span>Biaya Air:</span><span id="resBiayaAir">Rp 0</span></div>
-                <div class="flex justify-between"><span>Iuran Sampah:</span><span>Rp 10.000</span></div>
-                <hr class="my-2">
-                <div class="flex justify-between text-lg font-bold text-green-600"><span>Total Bayar:</span><span id="resTotal">Rp 0</span></div>
+                <div class="flex justify-between border-b pb-1">
+                    <span>Pemakaian Air:</span>
+                    <span id="resPemakaian" class="font-bold text-blue-700">0 m³</span>
+                </div>
+                <div class="flex justify-between border-b pb-1">
+                    <span>Biaya Air:</span>
+                    <span id="resBiayaAir" class="font-semibold text-gray-700">Rp 0</span>
+                </div>
+                <div class="flex justify-between border-b pb-1">
+                    <span>Iuran Sampah (Wajib):</span>
+                    <span class="font-semibold text-gray-700">Rp 10.000</span>
+                </div>
+                <div class="flex justify-between text-xl font-black text-green-600 pt-2">
+                    <span>TOTAL BAYAR:</span>
+                    <span id="resTotal">Rp 0</span>
+                </div>
             </div>
             
-            <button id="btnSimpan" onclick="simpanKeSupabase()" class="w-full mt-4 bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 font-semibold shadow">
-                Simpan Catatan ke Database
+            <button id="btnSimpan" onclick="simpanKeSupabase()" 
+                class="w-full mt-6 bg-green-500 text-white py-3 px-4 rounded-md hover:bg-green-600 font-bold shadow-md transition">
+                SIMPAN KE DATABASE
             </button>
         </div>
     </div>
 
+    <footer class="text-center mt-8 text-gray-400 text-xs">
+        &copy; 2026 Pengelola Rusunawa Gunungsari - Surabaya
+    </footer>
+
     <script>
         // --- KONFIGURASI SUPABASE ---
-        // GANTI DENGAN MILIK ANDA SENDIRI
         const SUPABASE_URL = 'https://mxtizprwaflafsejlrlw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_zfDUciq56k8zvSVc-Uw_7g_IIvrJMAQ';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Inisialisasi Client Supabase
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let dataTerhitung = {};
 
@@ -62,15 +89,22 @@
             const meterSekarang = parseFloat(document.getElementById('meterSekarang').value);
             const iuranSampah = 10000;
             
-            if (!noUnit || isNaN(meterLalu) || isNaN(meterSekarang) || meterSekarang < meterLalu) {
-                alert("Mohon isi data dengan benar."); return;
+            // Validasi Input
+            if (!noUnit || isNaN(meterLalu) || isNaN(meterSekarang)) {
+                alert("Harap isi semua kolom!"); return;
+            }
+            if (meterSekarang < meterLalu) {
+                alert("Meteran sekarang tidak boleh lebih kecil dari bulan lalu!"); return;
             }
 
+            // Logika Sesuai Instruksi:
+            // 1-10 m3 = 25.000 (Tetap)
+            // > 10 m3 = Pemakaian x 2.500
             const pemakaian = meterSekarang - meterLalu;
             let tagihanAir = (pemakaian <= 10) ? 25000 : pemakaian * 2500;
             const total = tagihanAir + iuranSampah;
 
-            // Simpan data ke variabel global untuk dikirim nanti
+            // Bungkus data untuk dikirim ke tabel pencatatan_air
             dataTerhitung = { 
                 no_unit: noUnit, 
                 meter_lalu: meterLalu, 
@@ -79,28 +113,37 @@
                 total_bayar: total 
             };
 
-            document.getElementById('resPemakaian').innerText = pemakaian + " m³";
+            // Update Tampilan HTML
+            document.getElementById('resPemakaian').innerText = pemakaian.toFixed(2) + " m³";
             document.getElementById('resBiayaAir').innerText = "Rp " + tagihanAir.toLocaleString('id-ID');
             document.getElementById('resTotal').innerText = "Rp " + total.toLocaleString('id-ID');
+            
+            // Munculkan struk hasil
             document.getElementById('hasil').classList.remove('hidden');
         }
 
         async function simpanKeSupabase() {
             const btn = document.getElementById('btnSimpan');
-            btn.innerText = "Menyimpan...";
+            const originalText = btn.innerText;
+            
+            btn.innerText = "Sedang Menyimpan...";
             btn.disabled = true;
 
-            const { data, error } = await supabase
-                .from('pencatatan_air') // Nama tabel di gambar Anda
+            // Proses Insert ke Tabel 'pencatatan_air'
+            const { data, error } = await _supabase
+                .from('pencatatan_air')
                 .insert([dataTerhitung]);
 
             if (error) {
-                alert("Gagal menyimpan: " + error.message);
+                alert("Gagal menyimpan data: " + error.message);
+                btn.innerText = originalText;
                 btn.disabled = false;
-                btn.innerText = "Simpan Catatan ke Database";
             } else {
-                alert("Data berhasil disimpan!");
-                location.reload(); // Refresh halaman setelah sukses
+                alert("✅ Data Berhasil Disimpan ke Supabase!");
+                // Reset form setelah sukses
+                document.getElementById('waterForm').reset();
+                document.getElementById('hasil').classList.add('hidden');
+                window.scrollTo(0, 0);
             }
         }
     </script>
