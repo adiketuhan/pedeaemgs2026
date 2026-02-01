@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pencatatan Air & Sampah - Rusunawa Gunungsari</title>
+    <title>Pencatatan Air Rusunawa Gunungsari</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-4">
 
@@ -15,84 +16,92 @@
         <form id="waterForm" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700">Nomor Unit / Kamar</label>
-                <input type="text" id="noUnit" placeholder="Contoh: A-102" required
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="text" id="noUnit" placeholder="Contoh: A-102" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
             </div>
-
             <div>
                 <label class="block text-sm font-medium text-gray-700">Meteran Bulan Lalu (m³)</label>
-                <input type="number" id="meterLalu" placeholder="0" required
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="number" id="meterLalu" placeholder="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
             </div>
-
             <div>
                 <label class="block text-sm font-medium text-gray-700">Meteran Bulan Ini (m³)</label>
-                <input type="number" id="meterSekarang" placeholder="0" required
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <input type="number" id="meterSekarang" placeholder="0" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
             </div>
-
-            <button type="button" onclick="hitungTagihan()" 
-                class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-semibold transition">
+            <button type="button" onclick="hitungTagihan()" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 font-semibold transition">
                 Hitung Tagihan
             </button>
         </form>
 
         <div id="hasil" class="mt-8 hidden border-t pt-4">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Rincian Tagihan:</h3>
+            <h3 class="text-lg font-bold text-gray-800 mb-3 text-center">Rincian Tagihan</h3>
             <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                    <span>Pemakaian Air:</span>
-                    <span id="resPemakaian" class="font-bold text-blue-600">0 m³</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Biaya Air:</span>
-                    <span id="resBiayaAir" class="font-semibold text-gray-700">Rp 0</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Iuran Sampah:</span>
-                    <span class="font-semibold text-gray-700">Rp 10.000</span>
-                </div>
+                <div class="flex justify-between"><span>Pemakaian Air:</span><span id="resPemakaian" class="font-bold">0 m³</span></div>
+                <div class="flex justify-between"><span>Biaya Air:</span><span id="resBiayaAir">Rp 0</span></div>
+                <div class="flex justify-between"><span>Iuran Sampah:</span><span>Rp 10.000</span></div>
                 <hr class="my-2">
-                <div class="flex justify-between text-lg font-bold text-green-600">
-                    <span>Total Bayar:</span>
-                    <span id="resTotal">Rp 0</span>
-                </div>
+                <div class="flex justify-between text-lg font-bold text-green-600"><span>Total Bayar:</span><span id="resTotal">Rp 0</span></div>
             </div>
             
-            <button class="w-full mt-4 bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 font-semibold shadow">
-                Simpan Catatan
+            <button id="btnSimpan" onclick="simpanKeSupabase()" class="w-full mt-4 bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 font-semibold shadow">
+                Simpan Catatan ke Database
             </button>
         </div>
     </div>
 
     <script>
+        // --- KONFIGURASI SUPABASE ---
+        // GANTI DENGAN MILIK ANDA SENDIRI
+        const SUPABASE_URL = 'https://URL-PROYEK-ANDA.supabase.co';
+        const SUPABASE_KEY = 'API-KEY-ANON-ANDA';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let dataTerhitung = {};
+
         function hitungTagihan() {
+            const noUnit = document.getElementById('noUnit').value;
             const meterLalu = parseFloat(document.getElementById('meterLalu').value);
             const meterSekarang = parseFloat(document.getElementById('meterSekarang').value);
             const iuranSampah = 10000;
             
-            if (isNaN(meterLalu) || isNaN(meterSekarang) || meterSekarang < meterLalu) {
-                alert("Input meteran tidak valid. Pastikan meteran sekarang lebih besar.");
-                return;
+            if (!noUnit || isNaN(meterLalu) || isNaN(meterSekarang) || meterSekarang < meterLalu) {
+                alert("Mohon isi data dengan benar."); return;
             }
 
             const pemakaian = meterSekarang - meterLalu;
-            let tagihanAir = 0;
-
-            // Logika Sesuai Permintaan
-            if (pemakaian <= 10) {
-                tagihanAir = 25000;
-            } else {
-                tagihanAir = pemakaian * 2500;
-            }
-
+            let tagihanAir = (pemakaian <= 10) ? 25000 : pemakaian * 2500;
             const total = tagihanAir + iuranSampah;
 
-            // Tampilkan Hasil
+            // Simpan data ke variabel global untuk dikirim nanti
+            dataTerhitung = { 
+                no_unit: noUnit, 
+                meter_lalu: meterLalu, 
+                meter_sekarang: meterSekarang, 
+                tagihan_air: tagihanAir, 
+                total_bayar: total 
+            };
+
             document.getElementById('resPemakaian').innerText = pemakaian + " m³";
             document.getElementById('resBiayaAir').innerText = "Rp " + tagihanAir.toLocaleString('id-ID');
             document.getElementById('resTotal').innerText = "Rp " + total.toLocaleString('id-ID');
             document.getElementById('hasil').classList.remove('hidden');
+        }
+
+        async function simpanKeSupabase() {
+            const btn = document.getElementById('btnSimpan');
+            btn.innerText = "Menyimpan...";
+            btn.disabled = true;
+
+            const { data, error } = await supabase
+                .from('pencatatan_air') // Nama tabel di gambar Anda
+                .insert([dataTerhitung]);
+
+            if (error) {
+                alert("Gagal menyimpan: " + error.message);
+                btn.disabled = false;
+                btn.innerText = "Simpan Catatan ke Database";
+            } else {
+                alert("Data berhasil disimpan!");
+                location.reload(); // Refresh halaman setelah sukses
+            }
         }
     </script>
 </body>
