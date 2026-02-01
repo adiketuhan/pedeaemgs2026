@@ -62,28 +62,35 @@
 
     <script>
         // --- KONFIGURASI SUPABASE ---
+        // Pastikan URL dan KEY ini sesuai dengan project Anda
         const SUPABASE_URL = 'https://mxtizprwaflafsejlrlw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_zfDUciq56k8zvSVc-Uw_7g_IIvrJMAQ';
         
         const { createClient } = supabase;
         const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Fungsi Pembantu: Membersihkan Teks (Hapus Spasi & Huruf Besar)
+        function bersihkan(teks) {
+            if (!teks) return "";
+            return String(teks).trim().toUpperCase();
+        }
+
         async function muatData() {
             const tableBody = document.getElementById('tabelBody');
             
-            // 1. Ambil Data Meteran (Pencatatan)
+            // 1. Ambil Data Meteran
             const { data: dataMeter, error: errMeter } = await _supabase
                 .from('pencatatan_air')
                 .select('*')
                 .order('created_at', { ascending: false });
 
-            // 2. Ambil Data Penghuni (Nama)
+            // 2. Ambil Data Penghuni
             const { data: dataPenghuni, error: errPenghuni } = await _supabase
                 .from('data_penghuni')
                 .select('*');
 
             if (errMeter || errPenghuni) {
-                console.error(errMeter, errPenghuni);
+                console.error("Error:", errMeter, errPenghuni);
                 tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500 font-bold">Gagal memuat data. Cek koneksi internet.</td></tr>`;
                 return;
             }
@@ -93,12 +100,13 @@
                 return;
             }
 
-            // 3. Gabungkan Data (Mapping Nama ke Unit)
-            // Kita buat "Kamus" agar mudah mencari nama berdasarkan no_unit
+            // 3. Gabungkan Data (Dengan Pembersihan Spasi)
             const mapPenghuni = {};
             if (dataPenghuni) {
                 dataPenghuni.forEach(org => {
-                    mapPenghuni[org.no_unit] = org.nama_penghuni;
+                    // Simpan no_unit yang sudah 'bersih' sebagai kunci
+                    const keyBersih = bersihkan(org.no_unit); 
+                    mapPenghuni[keyBersih] = org.nama_penghuni;
                 });
             }
 
@@ -110,11 +118,11 @@
                     day: '2-digit', month: 'short', year: '2-digit'
                 });
                 
-                // Cari nama penghuni, jika tidak ada tulis "Tanpa Nama"
-                const nama = mapPenghuni[item.no_unit] || '<span class="text-red-400 italic">Data Penghuni Kosong</span>';
+                // Cari nama menggunakan kunci yang juga 'dibersihkan'
+                const keyCari = bersihkan(item.no_unit);
+                const nama = mapPenghuni[keyCari] || '<span class="text-red-400 italic font-xs">Data Penghuni Kosong</span>';
                 
-                // Format Rupiah
-                const fmtUang = (angka) => "Rp " + angka.toLocaleString('id-ID');
+                const fmtUang = (angka) => "Rp " + (angka || 0).toLocaleString('id-ID');
                 const pemakaian = (item.meter_sekarang - item.meter_lalu).toFixed(0);
 
                 tableBody.innerHTML += `
@@ -122,7 +130,7 @@
                         <td class="p-4 text-gray-500">${tgl}</td>
                         <td class="p-4">
                             <div class="font-bold text-gray-900 text-lg">${item.no_unit}</div>
-                            <div class="text-blue-600 font-medium uppercase text-xs">${nama}</div>
+                            <div class="text-blue-600 font-medium uppercase text-xs tracking-wide">${nama}</div>
                         </td>
                         <td class="p-4 text-center text-gray-500">
                             ${item.meter_lalu} <span class="text-gray-300">➜</span> <b>${item.meter_sekarang}</b>
