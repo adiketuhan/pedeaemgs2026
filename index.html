@@ -3,149 +3,241 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pencatatan Air Rusunawa Gunungsari</title>
+    <title>Input Meteran - Rusunawa Gunungsari</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
+<body class="bg-gray-100 min-h-screen font-sans">
 
-    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 mt-6">
-        <div class="text-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">Input Pemakaian Air</h2>
-            <p class="text-sm text-gray-500">Rusunawa Gunungsari, Kota Surabaya</p>
+    <nav class="bg-blue-800 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <span class="text-xl font-bold">Input Pencatatan Air</span>
+            <a href="laporan.html" class="text-sm bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded">Lihat Laporan</a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-4">
+        
+        <div class="bg-white p-4 rounded-lg shadow mb-6 flex flex-col md:flex-row items-center gap-4">
+            <label class="font-bold text-gray-700">Pilih Lantai:</label>
+            <select id="pilihLantai" onchange="renderTabel()" class="border-2 border-blue-500 rounded p-2 w-full md:w-64 font-bold text-lg">
+                <option value="SEMUA">-- Tampilkan Semua --</option>
+                <option value="1">Lantai 1 (Unit A1xx)</option>
+                <option value="2">Lantai 2 (Unit A2xx / C2xx)</option>
+                <option value="3">Lantai 3 (Unit A3xx / C3xx)</option>
+                <option value="4">Lantai 4 (Unit A4xx / C4xx)</option>
+                <option value="5">Lantai 5 (Unit A5xx / C5xx)</option>
+            </select>
+            <div class="text-sm text-gray-500 ml-auto">
+                *Otomatis menampilkan Meteran Terakhir (Desember)
+            </div>
         </div>
 
-        <form id="waterForm" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Nomor Unit / Kamar</label>
-                <input type="text" id="noUnit" placeholder="Contoh: A-102" required 
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-700 text-sm uppercase font-bold">
+                            <th class="p-3 border">Unit</th>
+                            <th class="p-3 border">Nama Penghuni</th>
+                            <th class="p-3 border text-center bg-yellow-50">Meter Lalu</th>
+                            <th class="p-3 border text-center bg-blue-50">Meter Sekarang (Jan)</th>
+                            <th class="p-3 border text-right">Estimasi Tagihan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelInput">
+                        <tr><td colspan="5" class="p-8 text-center">Memuat data unit & meteran terakhir...</td></tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Meteran Bulan Lalu (m³)</label>
-                <input type="number" id="meterLalu" placeholder="0" required 
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Meteran Bulan Ini (m³)</label>
-                <input type="number" id="meterSekarang" placeholder="0" required 
-                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-            </div>
-
-            <button type="button" onclick="hitungTagihan()" 
-                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 font-bold transition shadow-lg">
-                HITUNG TAGIHAN
-            </button>
-        </form>
-
-        <div id="hasil" class="mt-8 hidden border-t-2 border-dashed pt-4 bg-blue-50 p-4 rounded-lg">
-            <h3 class="text-lg font-bold text-gray-800 mb-3 text-center">Rincian Tagihan</h3>
-            <div class="space-y-2 text-sm">
-                <div class="flex justify-between border-b pb-1">
-                    <span>Pemakaian Air:</span>
-                    <span id="resPemakaian" class="font-bold text-blue-700">0 m³</span>
-                </div>
-                <div class="flex justify-between border-b pb-1">
-                    <span>Biaya Air:</span>
-                    <span id="resBiayaAir" class="font-semibold text-gray-700">Rp 0</span>
-                </div>
-                <div class="flex justify-between border-b pb-1">
-                    <span>Iuran Sampah (Wajib):</span>
-                    <span class="font-semibold text-gray-700">Rp 10.000</span>
-                </div>
-                <div class="flex justify-between text-xl font-black text-green-600 pt-2">
-                    <span>TOTAL BAYAR:</span>
-                    <span id="resTotal">Rp 0</span>
-                </div>
-            </div>
-            
-            <button id="btnSimpan" onclick="simpanKeSupabase()" 
-                class="w-full mt-6 bg-green-500 text-white py-3 px-4 rounded-md hover:bg-green-600 font-bold shadow-md transition">
-                SIMPAN KE DATABASE
+        <div class="fixed bottom-6 right-6">
+            <button onclick="simpanSemua()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-full shadow-2xl flex items-center gap-2 transform transition hover:scale-105">
+                💾 SIMPAN DATA JANUARI
             </button>
         </div>
+
     </div>
 
-    <footer class="text-center mt-8 text-gray-400 text-xs">
-        &copy; 2026 Pengelola Rusunawa Gunungsari - Surabaya
-    </footer>
-
     <script>
-        // --- KONFIGURASI SUPABASE ---
+        // --- KONFIGURASI SUPABASE (SAMA SEPERTI SEBELUMNYA) ---
         const SUPABASE_URL = 'https://mxtizprwaflafsejlrlw.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_zfDUciq56k8zvSVc-Uw_7g_IIvrJMAQ';
-        
-        // Inisialisasi Client Supabase
-        const { createClient } = supabase;
-        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let dataTerhitung = {};
+        let globalDataUnits = [];
+        let globalDataMeter = {};
 
-        function hitungTagihan() {
-            const noUnit = document.getElementById('noUnit').value;
-            const meterLalu = parseFloat(document.getElementById('meterLalu').value);
-            const meterSekarang = parseFloat(document.getElementById('meterSekarang').value);
-            const iuranSampah = 10000;
-            
-            // Validasi Input
-            if (!noUnit || isNaN(meterLalu) || isNaN(meterSekarang)) {
-                alert("Harap isi semua kolom!"); return;
+        // 1. Ambil Data Unit & Meteran Terakhir saat Web Dibuka
+        async function inisialisasi() {
+            // Ambil Daftar Penghuni (Master)
+            const { data: units, error: errUnit } = await _supabase
+                .from('data_penghuni')
+                .select('*')
+                .order('no_unit', { ascending: true });
+
+            // Ambil Pencatatan Terakhir (Untuk cari meteran Desember/Lalu)
+            // Trik: Kita ambil semua, nanti di JS kita filter yang paling baru per unit
+            const { data: logs, error: errLog } = await _supabase
+                .from('pencatatan_air')
+                .select('no_unit, meter_sekarang, created_at')
+                .order('created_at', { ascending: false });
+
+            if (errUnit) { alert("Gagal ambil data unit"); return; }
+
+            globalDataUnits = units;
+
+            // Proses Mapping Meteran Terakhir
+            if (logs) {
+                logs.forEach(log => {
+                    // Karena sudah di-order descending (terbaru diatas), 
+                    // jika unit belum ada di map, berarti ini yang paling baru
+                    if (!globalDataMeter[log.no_unit]) {
+                        globalDataMeter[log.no_unit] = log.meter_sekarang;
+                    }
+                });
             }
-            if (meterSekarang < meterLalu) {
-                alert("Meteran sekarang tidak boleh lebih kecil dari bulan lalu!"); return;
-            }
 
-            // Logika Sesuai Instruksi:
-            // 1-10 m3 = 25.000 (Tetap)
-            // > 10 m3 = Pemakaian x 2.500
-            const pemakaian = meterSekarang - meterLalu;
-            let tagihanAir = (pemakaian <= 10) ? 25000 : pemakaian * 2500;
-            const total = tagihanAir + iuranSampah;
-
-            // Bungkus data untuk dikirim ke tabel pencatatan_air
-            dataTerhitung = { 
-                no_unit: noUnit, 
-                meter_lalu: meterLalu, 
-                meter_sekarang: meterSekarang, 
-                tagihan_air: tagihanAir, 
-                total_bayar: total 
-            };
-
-            // Update Tampilan HTML
-            document.getElementById('resPemakaian').innerText = pemakaian.toFixed(2) + " m³";
-            document.getElementById('resBiayaAir').innerText = "Rp " + tagihanAir.toLocaleString('id-ID');
-            document.getElementById('resTotal').innerText = "Rp " + total.toLocaleString('id-ID');
-            
-            // Munculkan struk hasil
-            document.getElementById('hasil').classList.remove('hidden');
+            renderTabel();
         }
 
-        async function simpanKeSupabase() {
-            const btn = document.getElementById('btnSimpan');
-            const originalText = btn.innerText;
-            
-            btn.innerText = "Sedang Menyimpan...";
-            btn.disabled = true;
+        // 2. Tampilkan Tabel sesuai Filter Lantai
+        function renderTabel() {
+            const filter = document.getElementById('pilihLantai').value;
+            const tbody = document.getElementById('tabelInput');
+            tbody.innerHTML = '';
 
-            // Proses Insert ke Tabel 'pencatatan_air'
-            const { data, error } = await _supabase
-                .from('pencatatan_air')
-                .insert([dataTerhitung]);
+            let jumlahBaris = 0;
+
+            globalDataUnits.forEach((unit, index) => {
+                // Logika Filter Lantai Sederhana (Cek angka lantai di dalam string unit)
+                // Contoh: A.1.01 mengandung "1", A.2.01 mengandung "2"
+                // Kita asumsi format unit mengandung angka lantai.
+                let tampil = false;
+                if (filter === 'SEMUA') tampil = true;
+                else {
+                    // Cek apakah no_unit mengandung angka lantai (misal "1" untuk lantai 1)
+                    // Tapi hati-hati A.1.12 (lantai 1) mengandung angka 1 dan 2.
+                    // Cara aman: Cek karakter kedua/ketiga atau prefix
+                    // Asumsi User: A.1.xx atau A1xx
+                    if (unit.no_unit.includes(filter)) tampil = true; 
+                    // Jika unit formatnya A.1.01, filter '1' akan ketemu.
+                }
+
+                if (tampil) {
+                    jumlahBaris++;
+                    const meterLalu = globalDataMeter[unit.no_unit] || 0; // Kalau data baru, 0
+                    
+                    const row = `
+                        <tr class="hover:bg-gray-50 border-b">
+                            <td class="p-3 font-bold text-gray-800">${unit.no_unit}</td>
+                            <td class="p-3 text-sm text-gray-600">${unit.nama_penghuni || '-'}</td>
+                            <td class="p-3 bg-yellow-50 text-center font-mono">
+                                <input type="number" id="lalu-${index}" value="${meterLalu}" readonly 
+                                    class="w-20 text-center bg-transparent border-none text-gray-500 select-none">
+                            </td>
+                            <td class="p-3 bg-blue-50 text-center">
+                                <input type="number" id="kini-${index}" 
+                                    oninput="hitungBaris(${index})" placeholder="..."
+                                    class="w-24 text-center p-2 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 font-bold text-lg text-blue-900">
+                            </td>
+                            <td class="p-3 text-right font-medium text-green-700" id="biaya-${index}">
+                                Rp 0
+                            </td>
+                            <input type="hidden" id="nounit-${index}" value="${unit.no_unit}">
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                }
+            });
+
+            if(jumlahBaris === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500">Tidak ada unit ditemukan untuk lantai ini.</td></tr>`;
+            }
+        }
+
+        // 3. Hitung Otomatis Saat Ngetik (Live Calculator)
+        function hitungBaris(index) {
+            const lalu = parseFloat(document.getElementById(`lalu-${index}`).value) || 0;
+            const kini = parseFloat(document.getElementById(`kini-${index}`).value);
+            const displayBiaya = document.getElementById(`biaya-${index}`);
+
+            if (isNaN(kini)) {
+                displayBiaya.innerText = "Rp 0";
+                return;
+            }
+
+            let pakai = kini - lalu;
+            if (pakai < 0) pakai = 0; // Tidak boleh minus
+
+            // RUMUS TARIF
+            let tagihanAir = 0;
+            if (pakai <= 10) {
+                tagihanAir = 25000;
+            } else {
+                tagihanAir = pakai * 2500;
+            }
+            let total = tagihanAir + 10000; // Sampah
+
+            displayBiaya.innerText = "Rp " + total.toLocaleString('id-ID');
+        }
+
+        // 4. Proses Simpan ke Database
+        async function simpanSemua() {
+            const inputs = document.querySelectorAll('input[id^="kini-"]');
+            let dataUpload = [];
+            let terisi = 0;
+
+            // Loop semua input yang ada isinya
+            inputs.forEach(input => {
+                if (input.value !== "") {
+                    const idx = input.id.split('-')[1];
+                    const no_unit = document.getElementById(`nounit-${idx}`).value;
+                    const meter_lalu = parseFloat(document.getElementById(`lalu-${idx}`).value);
+                    const meter_sekarang = parseFloat(input.value);
+                    
+                    // Hitung Ulang untuk Data Final
+                    let pakai = meter_sekarang - meter_lalu;
+                    if(pakai < 0) pakai = 0;
+                    let tagihan_air = (pakai <= 10) ? 25000 : (pakai * 2500);
+                    let total_bayar = tagihan_air + 10000;
+
+                    // Siapkan Object Data
+                    dataUpload.push({
+                        no_unit: no_unit,
+                        meter_lalu: meter_lalu,
+                        meter_sekarang: meter_sekarang,
+                        tagihan_air: tagihan_air,
+                        total_bayar: total_bayar,
+                        created_at: new Date().toISOString() // Tanggal HARI INI (Januari)
+                    });
+                    terisi++;
+                }
+            });
+
+            if (terisi === 0) {
+                Swal.fire('Belum ada data', 'Silakan isi angka meteran minimal satu unit.', 'warning');
+                return;
+            }
+
+            // Tampilkan Loading
+            Swal.fire({title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+
+            // Kirim ke Supabase
+            const { error } = await _supabase.from('pencatatan_air').insert(dataUpload);
 
             if (error) {
-                alert("Gagal menyimpan data: " + error.message);
-                btn.innerText = originalText;
-                btn.disabled = false;
+                Swal.fire('Gagal!', error.message, 'error');
             } else {
-                alert("✅ Data Berhasil Disimpan ke Supabase!");
-                // Reset form setelah sukses
-                document.getElementById('waterForm').reset();
-                document.getElementById('hasil').classList.add('hidden');
-                window.scrollTo(0, 0);
+                Swal.fire('Berhasil!', `Data ${terisi} unit berhasil disimpan.`, 'success')
+                .then(() => location.reload()); // Refresh halaman
             }
         }
+
+        // Jalankan
+        inisialisasi();
     </script>
 </body>
 </html>
